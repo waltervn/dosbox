@@ -24,7 +24,7 @@
 
 class Section;
 enum OPL_Mode {
-	OPL_none,OPL_cms,OPL_opl2,OPL_dualopl2,OPL_opl3,OPL_opl3gold
+	OPL_none,OPL_cms,OPL_opl2,OPL_dualopl2,OPL_opl3,OPL_opl3gold,OPL_opl3fpga
 };
 #define CAPTURE_WAVE	0x01
 #define CAPTURE_OPL		0x02
@@ -38,6 +38,8 @@ void OPL_Init(Section* sec,OPL_Mode mode);
 void CMS_Init(Section* sec);
 void OPL_ShutDown(Section* sec);
 void CMS_ShutDown(Section* sec);
+void OPL3FPGA_Init(Bitu sbAddr);
+void OPL3FPGA_Shutdown();
 
 bool SB_Get_Address(Bitu& sbaddr, Bitu& sbirq, Bitu& sbdma);
 bool TS_Get_Address(Bitu& tsaddr, Bitu& tsirq, Bitu& tsdma);
