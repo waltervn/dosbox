@@ -4,8 +4,10 @@
 #include "stdio.h"
 #include <math.h>
 #include "adlib.h"
+#include <string.h>
 
-static Adlib::Chip *chip = 0;
+static Adlib::Chip *chip;
+static unsigned char regCache[2][256];
 
 void MIDI_RawOutByte(Bit8u data);
 
@@ -18,12 +20,23 @@ static void writeReg(Bitu bank, Bitu reg, Bitu val) {
 	if (bank == 0 && chip->Write(reg, val))
 		return;
 
+	if (val == regCache[bank][reg])
+		return;
+
+	MIDI_RawOutByte(0x90 | ((val >> 7) << 2) | (bank << 1) | (reg >> 7));
+	MIDI_RawOutByte(reg & 0x7f);
+	MIDI_RawOutByte(val & 0x7f);
+
+/*
 	MIDI_RawOutByte(0xf0);
 	MIDI_RawOutByte(0x7d);
 	MIDI_RawOutByte(((bank & 1) << 6) | (reg >> 2));
 	MIDI_RawOutByte(((reg & 3) << 5) | (val >> 3));
 	MIDI_RawOutByte((val & 7) << 4);
 	MIDI_RawOutByte(0xf7);
+*/
+
+	regCache[bank][reg] = val;
 }
 
 static void writePort(Bitu port, Bitu val, Bitu /* iolen */) {
@@ -49,6 +62,9 @@ static const Bit16u oplPorts[] = {
 
 static void reset() {
 	int i;
+
+	memset(regCache, 1, sizeof(regCache));
+
 	for (i = 0; i < 256; i++) {
 		writeReg(0, i, 0);
 		writeReg(1, i, 0);
