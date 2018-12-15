@@ -32,6 +32,8 @@
 
 #define MASTER_CLOCK 7159090
 
+void MIDI_RawOutByte(Bit8u data);
+
 //My mixer channel
 static MixerChannel * cms_chan;
 //Timer to disable the channel after a while
@@ -55,6 +57,19 @@ static void write_cms(Bitu port, Bitu val, Bitu /* iolen */) {
 	case 2:
 		device[1]->data_w(0, 0, val);
 		break;
+	}
+}
+
+static Bitu cmsReg[2];
+static void write_cms_midi(Bitu port, Bitu val, Bitu /*iolen */) {
+	Bitu chip = (port >> 1) & 1;
+
+	if (port & 1) {
+		cmsReg[chip] = val & 0x1f;
+	} else {
+		MIDI_RawOutByte(0xb0 | chip);
+		MIDI_RawOutByte((cmsReg[chip] << 1) | ((val >> 7) & 1));
+		MIDI_RawOutByte(val & 0x7f);
 	}
 }
 
@@ -128,9 +143,6 @@ private:
 public:
 	CMS(Section* configuration):Module_base(configuration) {
 		Section_prop * section = static_cast<Section_prop *>(configuration);
-		Bitu sampleRate = section->Get_int( "oplrate" );
-		cmsBase = section->Get_hex("sbbase");
-		WriteHandler.Install( cmsBase, write_cms, IO_MB, 4 );
 
 		// A standalone Gameblaster has a magic chip on it which is
 		// sometimes used for detection.
@@ -140,25 +152,40 @@ public:
 			DetReadHandler.Install(cmsBase,read_cms_detect,IO_MB,16);
 		}
 
-		/* Register the Mixer CallBack */
-		cms_chan = MixerChan.Install(CMS_CallBack,sampleRate,"CMS");
-	
-		lastWriteTicks = PIC_Ticks;
+		const char * cmstype=section->Get_string("cmstype");
+		cmsBase = section->Get_hex("sbbase");
+		if (!strcasecmp(cmstype,"emu")) {
+			Bitu sampleRate = section->Get_int( "oplrate" );
+			WriteHandler.Install( cmsBase, write_cms, IO_MB, 4 );
 
-		Bit32u freq = 7159000;		//14318180 isa clock / 2
+			/* Register the Mixer CallBack */
+			cms_chan = MixerChan.Install(CMS_CallBack,sampleRate,"CMS");
+		
+			lastWriteTicks = PIC_Ticks;
 
-		machine_config config;
-		device[0] = new saa1099_device(config, "", 0, 7159090);
-		device[1] = new saa1099_device(config, "", 0, 7159090);
+			Bit32u freq = 7159000;		//14318180 isa clock / 2
 
-		device[0]->device_start();
-		device[1]->device_start();
+			machine_config config;
+			device[0] = new saa1099_device(config, "", 0, 7159090);
+			device[1] = new saa1099_device(config, "", 0, 7159090);
+
+			device[0]->device_start();
+			device[1]->device_start();
+		} else if (!strcasecmp(cmstype, "midi")) {
+			WriteHandler.Install( cmsBase, write_cms_midi, IO_MB, 4 );
+		}
+
+		MIDI_RawOutByte(0xff);
 	}
 
 	~CMS() {
+		MIDI_RawOutByte(0xff);
+
 		cms_chan = 0;
 		delete device[0];
+		device[0] = 0;
 		delete device[1];
+		device[1] = 0;
 	}
 };
 

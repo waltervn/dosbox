@@ -580,6 +580,11 @@ void DOSBOX_Init(void) {
 	Pstring->Set_values(sbtypes);
 	Pstring->Set_help("Type of Soundblaster to emulate. gb is Gameblaster.");
 
+	const char *cmstypes[] = { "emu", "midi", 0 };
+	Pstring = secprop->Add_string("cmstype",Property::Changeable::WhenIdle,"emu");
+	Pstring->Set_values(cmstypes);
+	Pstring->Set_help("Type of CMS to use. For 'midi' set mididevice as well.");
+
 	Phex = secprop->Add_hex("sbbase",Property::Changeable::WhenIdle,0x220);
 	Phex->Set_values(ios);
 	Phex->Set_help("The IO address of the soundblaster.");
